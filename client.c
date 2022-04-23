@@ -10,34 +10,57 @@
  */
 #include <stdio.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <gtk/gtk.h>
+
+static void button_action(GtkWidget *widget, gpointer data)
+{
+    g_print("Button clicked\n");
+}
+
+static void activate(GtkApplication *app, gpointer user_data)
+{
+    GtkWidget *window;
+    GtkWidget *button;
+
+    window = gtk_application_window_new (app);
+    gtk_window_set_title (GTK_WINDOW (window), "Window");
+    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+
+    button = gtk_button_new_with_label ("Hello World");
+    g_signal_connect (button, "clicked", G_CALLBACK (button_action), NULL);
+    gtk_window_set_child (GTK_WINDOW (window), button);
+
+    gtk_window_present (GTK_WINDOW (window));
+}
 
 int main(int argc, char *argv[])
 {
-    int sockfd;
-    sockdf = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
+    int socket_desc;
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc < 0)
     {
         perror("ERROR opening socket");
         return -1;
     }
-    // Creating server
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    /*// Creating server
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(1366);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
     // Connecting to server
-    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    if (connect(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
         printf("\n Error! \n");
         return 1;
-    }
-    // Sending message
-    char buffer[1024] = {0};
-    printf("\n Enter message: ");
-    scanf("%[^\n]", buffer);
-    send(sockfd, buffer, strlen(buffer), 0);
-    // Receiving message
-    int valread = read(sockfd, buffer, 1024);
-    printf("\n Message from server: %s \n", buffer);
-    return 0;
+    }*/
+    // Displaying window with GTK
+    GtkApplication *app;
+    int status;
+
+    app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+    g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+    status = g_application_run (G_APPLICATION (app), argc, argv);
+    g_object_unref (app);
+    return status;
 }
