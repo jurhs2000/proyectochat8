@@ -10,33 +10,61 @@
  */
 #include <stdio.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
-    int sockfd;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
+    int socket_desc, c, new_socket;
+    char *message, client_reply[2000];
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc < 0)
     {
         perror("ERROR opening socket");
         return -1;
     }
-    // Connecting to client
-    struct sockaddr_in client_addr;
-    client_addr.sin_family = AF_INET;
-    client_addr.sin_port = htons(PORT);
-    client_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    if (connect(sockfd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+    // Creating client
+    struct sockaddr_in client, server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8888);
+    server.sin_addr.s_addr = INADDR_ANY;
+    
+    //Bind
+    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
-        printf("\n Error! \n");
-        return 1;
+        puts("bind failed");
     }
-    // Receiving message
-    char buffer[1024] = {0};
-    int valread = read(sockfd, buffer, 1024);
-    printf("\n Message from client: %s \n", buffer);
-    // Sending message
-    printf("\n Enter message: ");
-    scanf("%[^\n]", buffer);
-    send(sockfd, buffer, strlen(buffer), 0);
+    puts("bind done");
+
+    //Listen
+	listen(socket_desc , 3);
+
+    //Accept and incoming connection
+	puts("Waiting for incoming connections...");
+	c = sizeof(struct sockaddr_in);
+	while( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
+	{
+		puts("Connection accepted");
+        printf("%d", c);
+        //Receive a reply from the server
+        if( recv(new_socket, client_reply , c, 0) < 0)
+        {
+            puts("recv failed");
+        }
+        puts("Reply received from client\n");
+        puts(client_reply);
+		
+		//Reply to the client
+		message = "Hello Client , I have received your connection. But I have to go now, bye\n";
+		write(new_socket , message , strlen(message));
+	}
+	
+	if (new_socket<0)
+	{
+		perror("accept failed");
+		return 1;
+	}
+
     return 0;
 }
