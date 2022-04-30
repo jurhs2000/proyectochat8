@@ -16,6 +16,20 @@
 static void button_action(GtkWidget *widget, gpointer data)
 {
     g_print("Button clicked\n");
+    GtkWidget *dialog;
+    GtkDialogFlags flags = GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL;
+    char error[] = "error1";
+    dialog = gtk_message_dialog_new (NULL,
+                                    flags,
+                                    GTK_MESSAGE_ERROR,
+                                    GTK_BUTTONS_CLOSE,
+                                    "Error reading “%s”: %s",
+                                    error,
+                                    g_strerror (2));
+    g_signal_connect (dialog, "response",
+                        G_CALLBACK (gtk_window_destroy),
+                        NULL);
+    gtk_widget_show(dialog);
 }
 
 static void activate(GtkApplication *app, gpointer user_data)
@@ -83,5 +97,6 @@ int main(int argc, char *argv[])
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
     status = g_application_run (G_APPLICATION (app), argc, argv);
     g_object_unref (app);
+
     return status;
 }
