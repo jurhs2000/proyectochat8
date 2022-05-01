@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "typeinfo": "c",
-        "string": "c"
+        "string": "c",
+        "system_error": "c"
     }
 }

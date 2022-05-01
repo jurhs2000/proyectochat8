@@ -110,6 +110,7 @@ void *connection_handler(void *socket_desc)
 	while( (read_size = recv(sock , client_message , 2000 , 0)) > 0 )
 	{
 		//Send the message back to client
+		puts(client_message);
 		write(sock , client_message , strlen(client_message));
 	}
 	
