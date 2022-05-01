@@ -21,7 +21,7 @@ void *connection_handler(void *);
 int main(int argc, char *argv[])
 {
     int socket_desc, c, new_socket, *thread_socket;
-    char *message, *client_ip, client_reply[2000];
+    char *client_ip, client_reply[8000];
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_desc < 0)
     {
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 		puts("Connection accepted");
         printf("%d", c);
         //Receive a reply from the server
-        if( recv(new_socket, client_reply , c, 0) < 0)
+        if( recv(new_socket, client_reply , 2000, 0) < 0)
         {
             puts("recv failed");
         }
@@ -63,11 +63,11 @@ int main(int argc, char *argv[])
         puts(client_reply);
 		
 		//Reply to the client
-		message = "Hello Client , I have received your connection. But I have to go now, bye\n";
+		const char *message = "Hello Client , I have received your connection. But I have to go now, bye\n";
 		write(new_socket , message , strlen(message));
 
         pthread_t sniffer_thread;
-		thread_socket = malloc(1);
+		thread_socket = (int*) malloc(1);
 		*thread_socket = new_socket;
 		
 		if( pthread_create( &sniffer_thread , NULL ,  connection_handler , (void*) thread_socket) < 0)
@@ -97,10 +97,10 @@ void *connection_handler(void *socket_desc)
 	//Get the socket descriptor
 	int sock = *(int*)socket_desc;
 	int read_size;
-	char *message , client_message[2000];
+	char client_message[2000];
 	
 	//Send some messages to the client
-	message = "Greetings! I am your connection handler\n";
+	const char *message = "Greetings! I am your connection handler\n";
 	write(sock , message , strlen(message));
 	
 	message = "Now type something and i shall repeat what you type \n";

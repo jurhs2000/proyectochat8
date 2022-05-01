@@ -12,6 +12,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <gtk/gtk.h>
+#include <time.h>
+#include <cjson/cJSON.h>
 
 GtkWidget *window;
 GtkWidget *grid;
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
 {
     int socket_desc;
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-    char *message , server_reply[2000];
+    char *connectionInit, server_reply[2000];
     if (socket_desc < 0)
     {
         perror("ERROR opening socket");
@@ -92,8 +94,8 @@ int main(int argc, char *argv[])
     // Creating server
     struct sockaddr_in server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8888);
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_port = htons(atoi(argv[3]));
+    server.sin_addr.s_addr = inet_addr(argv[2]);
     // Connecting to server
     if (connect(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
@@ -103,9 +105,26 @@ int main(int argc, char *argv[])
 
     puts("Connected\n");
 	
-	//Send some data
-	message = "adfsgdsgdfgdgfdgd dfg dfg d gfd gf dg df gd fg dg d fgd gf d gdfgdgg";
-	if( send(socket_desc , message , strlen(message) , 0) < 0)
+	//Send init connection data
+    cJSON *initConex = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    cJSON *connect_time = NULL;
+    cJSON *user_id = NULL;
+    request = cJSON_CreateString("INIT_CONEX");
+    cJSON_AddItemToObject(initConex, "request", request);
+    body = cJSON_CreateArray();
+    time_t seconds;
+    struct tm *timeinfo;
+    time(&seconds);
+    timeinfo = localtime(&seconds);
+    connect_time = cJSON_CreateString(asctime(timeinfo));
+    user_id = cJSON_CreateString(argv[1]);
+    cJSON_AddItemToArray(body, connect_time);
+    cJSON_AddItemToArray(body, user_id);
+    cJSON_AddItemToObject(initConex, "body", body);
+    connectionInit = cJSON_Print(initConex);
+	if( send(socket_desc , connectionInit , strlen(connectionInit) , 0) < 0)
 	{
 		puts("Send failed");
 		return 1;
@@ -123,11 +142,9 @@ int main(int argc, char *argv[])
     // Displaying window with GTK
     GtkApplication *app;
     int status;
-
     app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-    status = g_application_run (G_APPLICATION (app), argc, argv);
-    g_object_unref (app);
+    status = g_application_run (G_APPLICATION (app), 0, NULL);
 
     return status;
 }
