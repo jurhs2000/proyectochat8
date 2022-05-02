@@ -109,6 +109,7 @@ static void getChat(char *chat_str) {
     gtk_text_buffer_insert(textBuffer, &iter, viewTextText, -1);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), view);
     gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scrolled), 600);
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(scrolled), 800);
     gtk_grid_attach(GTK_GRID(grid), scrolled, 0,2,3,1);
 }
 
@@ -156,7 +157,7 @@ static void showUsers(void) {
     usersGrid = gtk_grid_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), usersGrid);
     gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scrolled), 600);
-    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(scrolled), 600);
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(scrolled), 800);
     gtk_grid_attach(GTK_GRID(grid), scrolled, 0,2,3,1);
     for (int i=0; i < usersSize; ++i) {
         snprintf(labelText, 50, "Este es el usuario %d", i);
