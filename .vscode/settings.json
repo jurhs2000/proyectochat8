@@ -4,5 +4,6 @@
         "string": "c",
         "system_error": "c",
         "sstream": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
