@@ -15,11 +15,33 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <map>
+#include <list>
+#include<iostream>
+
+struct User
+{
+	char name[20];
+	int age;
+};
+
+struct Message
+{
+	char emisor[20];
+	char msg[200];
+};
 
 void *connection_handler(void *);
+void addUser();
+void addMessage();
+void removeUser();
+using namespace std;
+std::map<int, User> user_list;
+std::list<Message> messages_list;
 
 int main(int argc, char *argv[])
 {
+	addUser();
     int socket_desc, c, new_socket, *thread_socket;
     char *client_ip, client_reply[8000];
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -88,6 +110,22 @@ int main(int argc, char *argv[])
 	}
     return 0;
 }
+
+void addUser(){
+	User temp_user = {"Jurhs", 22};
+	user_list[1] = temp_user;
+	// user_list.insert('A', temp_user);
+}
+
+void removeUser(){
+	user_list.erase(1);
+}
+
+void addMessage(){
+	Message temp_message = {"Jurhs", "hola amigos como estan"};
+	messages_list.push_back(temp_message);
+}
+
 
 /*
  * This will handle connection for each client
