@@ -2,6 +2,7 @@
     "files.associations": {
         "typeinfo": "c",
         "string": "c",
-        "system_error": "c"
+        "system_error": "c",
+        "sstream": "c"
     }
 }

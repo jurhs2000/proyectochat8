@@ -36,41 +36,6 @@ static void show_message(char error[]) {
     gtk_widget_show(dialog);
 }
 
-static void receive_from_server() {
-    //Receive a reply from the server
-    char server_reply[2000];
-	if( recv(socket_desc, server_reply , 2000 , 0) < 0)
-	{
-		puts("recv failed");
-	}
-	puts("Reply received\n");
-    show_message(server_reply);
-}
-
-static void showUsers(void) {
-    int usersSize = 10;
-    char labelText[50];
-    GtkWidget *label;
-    for (int i=0; i < usersSize; ++i) {
-        snprintf(labelText, 50, "Este es el usuario %d", i);
-        label = gtk_label_new(labelText);
-        gtk_grid_attach (GTK_GRID (grid), label, 0, i+1, 2, 1);
-    }
-}
-
-static void cleanUsers(GtkWidget *widget, gpointer data) {
-    int usersSize = 10;
-    for (int i=0; i < usersSize; ++i) {
-        gtk_grid_remove_row(GTK_GRID (grid), 1);
-    }
-}
-
-static void button_action(GtkWidget *widget, gpointer data)
-{
-    g_print("Button clicked\n");
-    showUsers();
-    show_message("hoaaa");
-}
 
 static int send_message(GtkWidget *widget, GtkEntryBuffer *buffer)
 {
@@ -109,6 +74,106 @@ static int send_message(GtkWidget *widget, GtkEntryBuffer *buffer)
 	}
 	puts("Message sended successfully\n");
     gtk_entry_buffer_set_text(buffer, "", 0);
+}
+
+static void getChat(char *chat_str) {
+    GtkWidget *scrolled, *view;
+    scrolled = gtk_scrolled_window_new();
+    view = gtk_text_view_new();
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(view), FALSE);
+    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(view), FALSE);
+    GtkTextBuffer *textBuffer = gtk_text_buffer_new(NULL);
+    GtkTextIter iter;
+    gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), textBuffer);
+    gtk_text_buffer_get_iter_at_offset(textBuffer, &iter, 0);
+    const cJSON *messages = NULL;
+    const cJSON *message = NULL;
+    cJSON *chatsObject = cJSON_Parse(chat_str);
+    messages = cJSON_GetObjectItemCaseSensitive(chatsObject, "body");
+    char *string = NULL;
+    char *viewTextText = (char *) malloc(8);
+    strcpy(viewTextText, "");
+    cJSON_ArrayForEach(message, messages) {
+        viewTextText = (char *) realloc(viewTextText, strlen(viewTextText) + 512);
+        cJSON *user = cJSON_GetArrayItem(message, 1);
+        string = cJSON_Print(user);
+        strcat(viewTextText, string);
+        cJSON *text = cJSON_GetArrayItem(message, 0);
+        string = cJSON_Print(text);
+        strcat(viewTextText, string);
+        cJSON *delivTime = cJSON_GetArrayItem(message, 2);
+        string = cJSON_Print(delivTime);
+        strcat(viewTextText, string);
+        strcat(viewTextText, "\n");
+    }
+    gtk_text_buffer_insert(textBuffer, &iter, viewTextText, -1);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), view);
+    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scrolled), 600);
+    gtk_grid_attach(GTK_GRID(grid), scrolled, 0,2,3,1);
+}
+
+static void render_general_chat(char* chat_json) {
+    gtk_grid_remove_row(GTK_GRID (grid), 2);
+    gtk_grid_remove_row(GTK_GRID (grid), 1);
+    GtkWidget *message_entry, *send_button;
+    GtkEntryBuffer *buffer = gtk_entry_buffer_new("", 0);
+    message_entry = gtk_entry_new_with_buffer (buffer);
+    g_signal_connect(message_entry, "activate", G_CALLBACK(send_message), buffer);
+    gtk_entry_set_placeholder_text(GTK_ENTRY(message_entry), "Ingresa un mensaje:");
+    gtk_grid_attach (GTK_GRID (grid), message_entry, 0, 1, 2, 1);
+    //send_button = gtk_button_new_with_label ("Send Message");
+    //g_signal_connect (send_button, "clicked", G_CALLBACK (send_message), buffer);
+    //gtk_grid_attach (GTK_GRID (grid), send_button, 3, 1, 1, 1);
+    char *chat_str = "{\"body\": [[\"mensaje 1\", \"user1\", \"18:03\"],[\"mensaje 2\", \"user2\", \"18:05\"],[\"mensaje 3\", \"user3\", \"19:21\"]]}";
+    getChat(chat_str);
+}
+
+static void receive_from_server() {
+    //Receive a reply from the server
+    char *server_reply = malloc(2000);
+	if( recv(socket_desc, server_reply , 2000 , 0) < 0)
+	{
+		puts("recv failed");
+	}
+	puts("Reply received\n");
+    show_message(server_reply);
+    // render general chat if response is of type GET_CHAT
+    render_general_chat(server_reply);
+}
+
+static void show_user_info(GtkWidget *widget, gpointer data)
+{
+    show_message("show user info");
+}
+
+static void showUsers(void) {
+    gtk_grid_remove_row(GTK_GRID (grid), 2);
+    gtk_grid_remove_row(GTK_GRID (grid), 1);
+    int usersSize = 100;
+    char labelText[50];
+    GtkWidget *scrolled, *usersGrid, *label, *infoButton, *chatButton;
+    scrolled = gtk_scrolled_window_new();
+    usersGrid = gtk_grid_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), usersGrid);
+    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scrolled), 600);
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(scrolled), 600);
+    gtk_grid_attach(GTK_GRID(grid), scrolled, 0,2,3,1);
+    for (int i=0; i < usersSize; ++i) {
+        snprintf(labelText, 50, "Este es el usuario %d", i);
+        label = gtk_label_new(labelText);
+        gtk_grid_attach (GTK_GRID (usersGrid), label, 0, i, 2, 1);
+        infoButton = gtk_button_new_with_label ("User Info");
+        g_signal_connect (infoButton, "clicked", G_CALLBACK (show_user_info), NULL);
+        gtk_grid_attach (GTK_GRID (usersGrid), infoButton, 3, i, 1, 1);
+        chatButton = gtk_button_new_with_label ("Chat User");
+        g_signal_connect (chatButton, "clicked", G_CALLBACK (show_user_info), NULL);
+        gtk_grid_attach (GTK_GRID (usersGrid), chatButton, 4, i, 1, 1);
+    }
+}
+
+static void button_action(GtkWidget *widget, gpointer data)
+{
+    showUsers();
 }
 
 static int create_connection(char *argv[]) {
@@ -159,21 +224,9 @@ static int create_connection(char *argv[]) {
 	puts("Successful init connection\n");
 }
 
-static void render_general_chat(void) {
-    GtkWidget *message_entry, *send_button;
-    GtkEntryBuffer *buffer = gtk_entry_buffer_new("", 0);
-    message_entry = gtk_entry_new_with_buffer (buffer);
-    g_signal_connect(message_entry, "activate", G_CALLBACK(send_message), buffer);
-    gtk_entry_set_placeholder_text(GTK_ENTRY(message_entry), "Ingresa un mensaje:");
-    gtk_grid_attach (GTK_GRID (grid), message_entry, 0, 1, 2, 1);
-    //send_button = gtk_button_new_with_label ("Send Message");
-    //g_signal_connect (send_button, "clicked", G_CALLBACK (send_message), buffer);
-    //gtk_grid_attach (GTK_GRID (grid), send_button, 3, 1, 1, 1);
-}
-
 static void activate(GtkApplication *app, gpointer user_data)
 {
-    GtkWidget *showUsersButton, *switchStatusButton, *scrolled, *view;
+    GtkWidget *showUsersButton, *switchStatusButton;
 
     window = gtk_application_window_new (app);
     gtk_window_set_title (GTK_WINDOW (window), "Window");
@@ -187,17 +240,8 @@ static void activate(GtkApplication *app, gpointer user_data)
     gtk_grid_attach (GTK_GRID (grid), showUsersButton, 0, 0, 1, 1);
 
     switchStatusButton = gtk_button_new_with_label ("Switch Status");
-    g_signal_connect (switchStatusButton, "clicked", G_CALLBACK (cleanUsers), NULL);
+    g_signal_connect (switchStatusButton, "clicked", G_CALLBACK (render_general_chat), NULL);
     gtk_grid_attach (GTK_GRID (grid), switchStatusButton, 1, 0, 1, 1);
-
-    render_general_chat();
-
-    scrolled = gtk_scrolled_window_new();
-    view = gtk_text_view_new();
-    gtk_text_view_set_editable(GTK_TEXT_VIEW(view), FALSE);
-    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(view), FALSE);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), view);
-    gtk_grid_attach(GTK_GRID(grid), scrolled, 0,3,1,1);
 
     gtk_window_present (GTK_WINDOW (window));
 
