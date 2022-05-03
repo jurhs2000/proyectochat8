@@ -208,28 +208,28 @@ void *connection_handler(void *socket_desc)
 
                 if (request == "INIT_CONEX")
                 {
+					printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+				}
+				else if (request == "END_CONEX")
+				{
 
-								}
-								else if (request == "END_CONEX")
-								{
+				}
+				else if (request == "GET_CHAT")
+				{
 
-								}
-								else if (request == "GET_CHAT")
-								{
+				}
+				else if (request == "POST_CHAT")
+				{
 
-								}
-								else if (request == "POST_CHAT")
-								{
+				}
+				else if (request == "GET_USER")
+				{
 
-								}
-								else if (request == "GET_USER")
-								{
+				}
+				else if (request == "PUT_STATUS")
+				{
 
-								}
-								else if (request == "PUT_STATUS")
-			}
-			else {
-				printf("no buffer");
+				}
 			}
 		}
 		catch (const std::exception &e)
