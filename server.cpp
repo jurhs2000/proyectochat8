@@ -183,10 +183,44 @@ const string getMessages(vector<Message> messages)
  * */
 void *connection_handler(void *socket_desc)
 {
+	User currentUser;
+	User *new_user = (User *)socket_desc;
+	int user_socket = new_user->getSocket();
+
 	//Get the socket descriptor
 	int sock = *(int*)socket_desc;
 	int read_size;
 	char client_message[2000];
+
+	while (1)
+	{
+		try
+		{
+			char buffer[8192];
+			int recived = recv(user_socket, buffer, 8192, 0);
+			if (recived > 0)
+			{
+				printf("Recibido buffer: %s\n", buffer);
+				auto j = json::parse(buffer);
+                cout << j << "json" << endl;
+
+                string request = j["request"];
+
+                // SI EL REQUEST ES INIT_CONEX, SE REGISTRA EL USUARIO
+                if (request == "INIT_CONEX")
+                {
+					printf("SI ES AQUI");
+				}
+			}
+			else {
+				printf("no buffer");
+			}
+		}
+		catch (const std::exception &e)
+        {
+            printf("Hubo un error :(");
+        }
+	}
 	
 	//Send some messages to the client
 	const char *message = "Greetings! I am your connection handler\n";
