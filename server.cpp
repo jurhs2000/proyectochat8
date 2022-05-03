@@ -27,7 +27,7 @@
 
 void *connection_handler(void *);
 void addUser();
-json getMessages(vector<Message>);
+const string getMessages(vector<Message>);
 void addMessage();
 void getUsers();
 void removeUser();
@@ -68,12 +68,11 @@ int main(int argc, char *argv[])
 	messages_list.push_back(mensaje1);
 	messages_list.push_back(mensaje2);
 
-	json list_of_messages;
-	json *temp_list_of_messages;
-
 	getUsers();
-	list_of_messages = getMessages(messages_list);
+	std::string list_of_messages = getMessages(messages_list);
+	printf("%s", list_of_messages.c_str());
 
+	const char *message = list_of_messages.c_str();
     int socket_desc, c, new_socket, *thread_socket;
     char *client_ip, client_reply[8000];
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -116,8 +115,6 @@ int main(int argc, char *argv[])
         puts("Message received from client\n");
         puts(client_reply);
 		
-		//Reply to the client
-		const char *message = "Hello Client , I have received your connection. But I have to go now, bye\n";
 		write(new_socket , message , strlen(message));
 
         pthread_t sniffer_thread;
@@ -163,9 +160,10 @@ void getUsers()
 	}
 }
 
-json getMessages(vector<Message> messages)
+const string getMessages(vector<Message> messages)
 {
 	json data;
+	json *data_ptr;
 	data["response"] = "GET_CHAT";
 	data["code"] = 200;
 	data["body"] = json::array();
@@ -174,8 +172,9 @@ json getMessages(vector<Message> messages)
 		json list_of_messages = json::array({item.message, item.emitter, item.receptor, item.time});
 		data["body"].push_back(list_of_messages);
 	}
-	std::cout << data << ' ';
-	return &data;
+	//Reply to the client
+	std::string s = data.dump();
+	return s;
 }
 
 

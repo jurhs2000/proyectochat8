@@ -144,6 +144,7 @@ static void receive_from_server() {
 		puts("recv failed");
 	}
 	puts("Reply received\n");
+    puts(server_reply);
     show_message(server_reply);
     // render general chat if response is of type GET_CHAT
     render_general_chat(server_reply);
