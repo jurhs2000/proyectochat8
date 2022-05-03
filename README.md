@@ -15,5 +15,5 @@ gcc -o client client.c `pkg-config --cflags --libs gtk4` -lcjson
 ```
 To compile the server we need to link the pthread library using the next command
 ```sh
-gcc -o server server.c -lpthread
+g++ -o server server.cpp Message.cpp User.cpp -lpthread
 ```
