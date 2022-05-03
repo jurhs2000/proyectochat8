@@ -206,11 +206,27 @@ void *connection_handler(void *socket_desc)
 
                 string request = j["request"];
 
-                // SI EL REQUEST ES INIT_CONEX, SE REGISTRA EL USUARIO
                 if (request == "INIT_CONEX")
                 {
-					printf("SI ES AQUI");
-				}
+
+								}
+								else if (request == "END_CONEX")
+								{
+
+								}
+								else if (request == "GET_CHAT")
+								{
+
+								}
+								else if (request == "POST_CHAT")
+								{
+
+								}
+								else if (request == "GET_USER")
+								{
+
+								}
+								else if (request == "PUT_STATUS")
 			}
 			else {
 				printf("no buffer");
