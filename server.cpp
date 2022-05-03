@@ -18,30 +18,62 @@
 #include <map>
 #include <list>
 #include <iostream>
+#include <vector>
+#include "Message.h"
+#include "user.h"
+#include "json.hpp"
+#include <string>
 
-struct User
-{
-	char name[20];
-	int age;
-};
-
-struct Message
-{
-	char emisor[20];
-	char msg[200];
-};
 
 void *connection_handler(void *);
 void addUser();
+json getMessages(vector<Message>);
 void addMessage();
+void getUsers();
 void removeUser();
 using namespace std;
-std::map<int, User> user_list;
-std::list<Message> messages_list;
+using json = nlohmann::json;
+vector<Message> messages_list;
+map<string, User *> user_list = {};
+// std::list<Message> messages_list;
 
 int main(int argc, char *argv[])
 {
-	addUser();
+	User user1;
+	User user2;
+	user1.userName = "jurhs";
+	user1.status = "1";
+	user1.socketId = 1;
+	user1.lastConnection = 10;
+	user_list["julioherrera"] = &user1;
+
+	user2.userName = "jurhs";
+	user2.status = "1";
+	user2.socketId = 1;
+	user2.lastConnection = 10;
+	user_list["oscarsaravia"] = &user2;
+
+	Message mensaje1;
+	Message mensaje2;
+	mensaje1.message = "HOLA: ESTE ES EL MENSAJE 1";
+	mensaje1.emitter = "RAHUL";
+	mensaje1.receptor = "JUhrs";
+	mensaje1.time = "15:59";
+
+	mensaje2.message = "HOLA: ESTE ES EL MENSAJE 2";
+	mensaje2.emitter = "RAHUL";
+	mensaje2.receptor = "JUhrs";
+	mensaje2.time = "15:59";
+
+	messages_list.push_back(mensaje1);
+	messages_list.push_back(mensaje2);
+
+	json list_of_messages;
+	json *temp_list_of_messages;
+
+	getUsers();
+	list_of_messages = getMessages(messages_list);
+
     int socket_desc, c, new_socket, *thread_socket;
     char *client_ip, client_reply[8000];
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -112,18 +144,38 @@ int main(int argc, char *argv[])
 }
 
 void addUser(){
-	User temp_user = {"Jurhs", 22};
-	user_list[1] = temp_user;
-	// user_list.insert('A', temp_user);
+	
 }
 
 void removeUser(){
-	user_list.erase(1);
+
 }
 
 void addMessage(){
-	Message temp_message = {"Jurhs", "hola amigos como estan"};
-	messages_list.push_back(temp_message);
+
+}
+
+void getUsers()
+{
+	for(const auto &user: user_list)
+	{
+		std::cout << user.first << ' ';
+	}
+}
+
+json getMessages(vector<Message> messages)
+{
+	json data;
+	data["response"] = "GET_CHAT";
+	data["code"] = 200;
+	data["body"] = json::array();
+	for (auto &item: messages)
+	{
+		json list_of_messages = json::array({item.message, item.emitter, item.receptor, item.time});
+		data["body"].push_back(list_of_messages);
+	}
+	std::cout << data << ' ';
+	return &data;
 }
 
 
