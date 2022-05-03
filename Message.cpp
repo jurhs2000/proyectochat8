@@ -9,7 +9,7 @@ Message::Message()
 {
     message = "";
     emitter = "";
-    receptor = "";
+    //receptor = "";
     time = "";
 }
 
@@ -33,15 +33,15 @@ string Message::getEmitter()
     return emitter;
 }
 
-void Message::setReceptor(string receptor)
+/*void Message::setReceptor(string receptor)
 {
     receptor = receptor;
-}
+}*/
 
-string Message::getReceptor()
+/*string Message::getReceptor()
 {
     return receptor;
-}
+}*/
 
 void Message::setTime(string time)
 {

@@ -57,12 +57,12 @@ int main(int argc, char *argv[])
 	Message mensaje2;
 	mensaje1.message = "HOLA: ESTE ES EL MENSAJE 1";
 	mensaje1.emitter = "RAHUL";
-	mensaje1.receptor = "JUhrs";
+	//mensaje1.receptor = "JUhrs";
 	mensaje1.time = "15:59";
 
 	mensaje2.message = "HOLA: ESTE ES EL MENSAJE 2";
 	mensaje2.emitter = "RAHUL";
-	mensaje2.receptor = "JUhrs";
+	//mensaje2.receptor = "JUhrs";
 	mensaje2.time = "15:59";
 
 	messages_list.push_back(mensaje1);
@@ -169,7 +169,7 @@ const string getMessages(vector<Message> messages)
 	data["body"] = json::array();
 	for (auto &item: messages)
 	{
-		json list_of_messages = json::array({item.message, item.emitter, item.receptor, item.time});
+		json list_of_messages = json::array({item.message, item.emitter/*, item.receptor*/, item.time});
 		data["body"].push_back(list_of_messages);
 	}
 	//Reply to the client

@@ -15,7 +15,7 @@
 #include <time.h>
 #include <cjson/cJSON.h>
 
-int socket_desc;
+int socket_desc, status = 0;
 char *user;
 GtkWidget *window;
 GtkWidget *grid;
@@ -31,6 +31,11 @@ static void show_message(char error[]) {
     gtk_widget_show(dialog);
 }
 
+static void csr(char *response) {
+    memmove(response, response+1, strlen(response)-2);
+    response[strlen(response)-1] = '\0';
+    response[strlen(response)-1] = '\0';
+}
 
 static int send_message(GtkWidget *widget, GtkEntryBuffer *buffer)
 {
@@ -86,6 +91,7 @@ static void get_chat(char *chat_str) {
     GtkTextIter iter;
     gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), text_buffer);
     gtk_text_buffer_get_iter_at_offset(text_buffer, &iter, 0);
+    puts(chat_str);
     const cJSON *messages = NULL;
     const cJSON *message = NULL;
     cJSON *chats_object = cJSON_Parse(chat_str);
@@ -97,12 +103,17 @@ static void get_chat(char *chat_str) {
         message_formatted = (char *) realloc(message_formatted, strlen(message_formatted) + 512);
         cJSON *user = cJSON_GetArrayItem(message, 1);
         property_string = cJSON_Print(user);
-        strcat(message_formatted, property_string);
-        cJSON *text = cJSON_GetArrayItem(message, 0);
-        property_string = cJSON_Print(text);
+        csr(property_string);
         strcat(message_formatted, property_string);
         cJSON *delivTime = cJSON_GetArrayItem(message, 2);
         property_string = cJSON_Print(delivTime);
+        csr(property_string);
+        strcat(message_formatted, " sended at ");
+        strcat(message_formatted, property_string);
+        cJSON *text = cJSON_GetArrayItem(message, 0);
+        property_string = cJSON_Print(text);
+        csr(property_string);
+        strcat(message_formatted, ": ");
         strcat(message_formatted, property_string);
         strcat(message_formatted, "\n");
     }
@@ -132,30 +143,108 @@ static void render_general_chat(char* chat_json) {
     gtk_widget_set_margin_bottom(send_button, 10);
     g_signal_connect (send_button, "clicked", G_CALLBACK (send_message), buffer);
     gtk_grid_attach (GTK_GRID (grid), send_button, 2, 1, 1, 1);
-    char *chat_str = "{\"body\": [[\"mensaje 1\", \"user1\", \"18:03\"],[\"mensaje 2\", \"user2\", \"18:05\"],[\"mensaje 3\", \"user3\", \"19:21\"]]}";
-    get_chat(chat_str);
+    get_chat(chat_json);
 }
 
-static void receive_from_server() {
-    //Receive a reply from the server
-    char *server_reply = malloc(2000);
-	if( recv(socket_desc, server_reply , 2000 , 0) < 0)
+static int req_chat(GtkWidget *widget, gpointer data) {
+    // Creating JSON object
+    cJSON *get_chat = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    request = cJSON_CreateString("GET_CHAT");
+    cJSON_AddItemToObject(get_chat, "request", request);
+    body = cJSON_CreateString("all");
+    cJSON_AddItemToObject(get_chat, "body", body);
+    // Parsing JSON to string
+    char *get_chat_str;
+    get_chat_str = cJSON_Print(get_chat);
+    // Sending connection request
+	if( send(socket_desc , get_chat_str , strlen(get_chat_str) , 0) < 0)
 	{
-		puts("recv failed");
+		puts("Messages can not be requested");
+		return 1;
 	}
-	puts("Reply received\n");
-    puts(server_reply);
-    show_message(server_reply);
-    // render general chat if response is of type GET_CHAT
-    render_general_chat(server_reply);
+	puts("Messages requested successfully\n");
 }
 
-static void show_user_info(GtkWidget *widget, gpointer data)
+static int req_users(GtkWidget *widget, gpointer data) {
+    // Creating JSON object
+    cJSON *get_user = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    request = cJSON_CreateString("GET_USER");
+    cJSON_AddItemToObject(get_user, "request", request);
+    body = cJSON_CreateString("all");
+    cJSON_AddItemToObject(get_user, "body", body);
+    // Parsing JSON to string
+    char *get_user_str;
+    get_user_str = cJSON_Print(get_user);
+    // Sending connection request
+	if( send(socket_desc , get_user_str , strlen(get_user_str) , 0) < 0)
+	{
+		puts("Users can not be requested");
+		return 1;
+	}
+	puts("Users requested successfully\n");
+}
+
+static int req_user_info(GtkWidget *widget, char *username) {
+    // Creating JSON object
+    cJSON *get_user = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    request = cJSON_CreateString("GET_USER");
+    cJSON_AddItemToObject(get_user, "request", request);
+    body = cJSON_CreateString(username);
+    cJSON_AddItemToObject(get_user, "body", body);
+    // Parsing JSON to string
+    char *get_user_str;
+    get_user_str = cJSON_Print(get_user);
+    // Sending connection request
+	if( send(socket_desc , get_user_str , strlen(get_user_str) , 0) < 0)
+	{
+		puts("User Info can not be requested");
+		return 1;
+	}
+	puts("User Info requested successfully\n");
+}
+
+static int req_switch_status(GtkWidget *widget, gpointer data) {
+    // Creating JSON object
+    cJSON *put_status = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    request = cJSON_CreateString("PUT_STATUS");
+    cJSON_AddItemToObject(put_status, "request", request);
+    if (status == 0) {
+        status = 2;
+    } else {
+        status = 0;
+    }
+    if (status == 0) {
+        body = cJSON_CreateString("0");
+    } else {
+        body = cJSON_CreateString("2");
+    }
+    cJSON_AddItemToObject(put_status, "body", body);
+    // Parsing JSON to string
+    char *put_status_str;
+    put_status_str = cJSON_Print(put_status);
+    // Sending connection request
+	if( send(socket_desc , put_status_str , strlen(put_status_str) , 0) < 0)
+	{
+		puts("Status can not be changed");
+		return 1;
+	}
+	puts("Status changed successfully\n");
+}
+
+static void show_user_info(char *user_ip, char *user_status)
 {
     show_message("show user info");
 }
 
-static void show_users(GtkWidget *widget) {
+static void show_users(void) {
     gtk_grid_remove_row(GTK_GRID (grid), 2);
     gtk_grid_remove_row(GTK_GRID (grid), 1);
     int users_size = 100;
@@ -176,13 +265,77 @@ static void show_users(GtkWidget *widget) {
         info_button = gtk_button_new_with_label ("User Info");
         gtk_widget_set_margin_start(info_button, 10);
         gtk_widget_set_margin_top(info_button, 10);
-        g_signal_connect (info_button, "clicked", G_CALLBACK (show_user_info), NULL);
+        g_signal_connect (info_button, "clicked", G_CALLBACK (req_user_info), user_text);
         gtk_grid_attach (GTK_GRID (users_grid), info_button, 3, i, 1, 1);
         chat_button = gtk_button_new_with_label ("Chat User");
         gtk_widget_set_margin_start(chat_button, 10);
         gtk_widget_set_margin_top(chat_button, 10);
-        g_signal_connect (chat_button, "clicked", G_CALLBACK (show_user_info), NULL);
+        g_signal_connect (chat_button, "clicked", G_CALLBACK (req_user_info), user_text);
         gtk_grid_attach (GTK_GRID (users_grid), chat_button, 4, i, 1, 1);
+    }
+}
+
+static char *switch_status_text(void) {
+    char *status_text;
+    if (status == 0) {
+        status_text = "Switch Status to Busy";
+    } else {
+        status_text = "Switch Status to Active";
+    }
+    return status_text;
+}
+
+static void switch_status(void) {
+    GtkWidget *button_to_remove = gtk_grid_get_child_at(GTK_GRID(grid), 2, 0);
+    gtk_grid_remove(GTK_GRID (grid), button_to_remove);
+    GtkWidget *switch_status_button;
+    switch_status_button = gtk_button_new_with_label (switch_status_text());
+    gtk_widget_set_margin_start(switch_status_button, 10);
+    gtk_widget_set_margin_end(switch_status_button, 10);
+    gtk_widget_set_margin_top(switch_status_button, 10);
+    gtk_widget_set_margin_bottom(switch_status_button, 10);
+    g_signal_connect (switch_status_button, "clicked", G_CALLBACK (req_switch_status), NULL);
+    gtk_grid_attach (GTK_GRID (grid), switch_status_button, 2, 0, 1, 1);
+}
+
+static void receive_from_server(void) {
+    //Receive a reply from the server
+    char *server_reply = malloc(2000);
+	if( recv(socket_desc, server_reply , 2000 , 0) < 0)
+	{
+		puts("recv failed");
+	}
+	puts("Reply received\n");
+    const cJSON *response_type = NULL;
+    const cJSON *code = NULL;
+    const cJSON *body = NULL;
+    cJSON *response = cJSON_Parse(server_reply);
+    response_type = cJSON_GetObjectItemCaseSensitive(response, "response");
+    code = cJSON_GetObjectItemCaseSensitive(response, "code");
+    body = cJSON_GetObjectItemCaseSensitive(response, "body");
+    char *response_str = NULL;
+    response_str = cJSON_Print(response_type);
+    csr(response_str);
+
+    if (strcmp(response_str, "GET_CHAT") == 0) {
+        // render general chat if response is of type GET_CHAT
+        render_general_chat(server_reply);
+    } else if (strcmp(response_str, "GET_USER") == 0) {
+        cJSON *body_first = cJSON_GetArrayItem(body, 0);
+        int is_arr = cJSON_IsArray(body_first);
+        if (is_arr == 1) { // todos los usuarios
+            show_users();
+        } else { // info de usuario especifico
+            cJSON *user_status = cJSON_GetArrayItem(body, 1);
+            char *user_ip_str = NULL, *user_status_str = NULL;
+            user_ip_str = cJSON_Print(body_first);
+            user_status_str = cJSON_Print(user_status);
+            show_user_info(user_ip_str, user_status_str);
+        }
+    } else if (strcmp(response_str, "POST_CHAT") == 0) {
+        render_general_chat(server_reply);
+    } else if (strcmp(response_str, "PUT_STATUS") == 0) {
+        switch_status();
     }
 }
 
@@ -236,7 +389,7 @@ static int create_connection(char *argv[]) {
 
 static void activate(GtkApplication *app, gpointer user_data)
 {
-    GtkWidget *show_users_button, *switch_status_button;
+    GtkWidget *show_users_button, *view_chat_button, *switch_status_button;
 
     window = gtk_application_window_new (app);
     gtk_window_set_title (GTK_WINDOW (window), "Window");
@@ -249,15 +402,23 @@ static void activate(GtkApplication *app, gpointer user_data)
     gtk_widget_set_margin_start(show_users_button, 10);
     gtk_widget_set_margin_top(show_users_button, 10);
     gtk_widget_set_margin_bottom(show_users_button, 10);
-    g_signal_connect (show_users_button, "clicked", G_CALLBACK (show_users), NULL);
+    g_signal_connect (show_users_button, "clicked", G_CALLBACK (req_users), NULL);
     gtk_grid_attach (GTK_GRID (grid), show_users_button, 0, 0, 1, 1);
 
-    switch_status_button = gtk_button_new_with_label ("Switch Status");
+    view_chat_button = gtk_button_new_with_label ("View Chat");
+    gtk_widget_set_margin_start(view_chat_button, 10);
+    gtk_widget_set_margin_top(view_chat_button, 10);
+    gtk_widget_set_margin_bottom(view_chat_button, 10);
+    g_signal_connect (view_chat_button, "clicked", G_CALLBACK (req_chat), NULL);
+    gtk_grid_attach (GTK_GRID (grid), view_chat_button, 1, 0, 1, 1);
+
+    switch_status_button = gtk_button_new_with_label (switch_status_text());
     gtk_widget_set_margin_start(switch_status_button, 10);
+    gtk_widget_set_margin_end(switch_status_button, 10);
     gtk_widget_set_margin_top(switch_status_button, 10);
     gtk_widget_set_margin_bottom(switch_status_button, 10);
-    g_signal_connect (switch_status_button, "clicked", G_CALLBACK (render_general_chat), NULL);
-    gtk_grid_attach (GTK_GRID (grid), switch_status_button, 1, 0, 1, 1);
+    g_signal_connect (switch_status_button, "clicked", G_CALLBACK (req_switch_status), NULL);
+    gtk_grid_attach (GTK_GRID (grid), switch_status_button, 2, 0, 1, 1);
 
     gtk_window_present (GTK_WINDOW (window));
 
