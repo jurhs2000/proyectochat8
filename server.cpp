@@ -39,6 +39,8 @@ map<string, User *> user_list = {};
 
 int main(int argc, char *argv[])
 {
+	// int port;
+	// port = atoi(argv[1]);
 	User user1;
 	User user2;
 	user1.userName = "jurhs";
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
 	user1.lastConnection = 10;
 	user_list["julioherrera"] = &user1;
 
-	user2.userName = "jurhs";
+	user2.userName = "jurhs2";
 	user2.status = "1";
 	user2.socketId = 1;
 	user2.lastConnection = 10;
@@ -68,7 +70,6 @@ int main(int argc, char *argv[])
 	messages_list.push_back(mensaje1);
 	messages_list.push_back(mensaje2);
 
-	getUsers();
 	std::string list_of_messages = getMessages(messages_list);
 	printf("%s", list_of_messages.c_str());
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
     // Creating client
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8888);
+    server.sin_port = htons(8889);
     server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
@@ -148,15 +149,36 @@ void removeUser(){
 
 }
 
-void addMessage(){
-
+void addMessage(Message message){
+	messages_list.push_back(message);
 }
 
-void getUsers()
+void getUsers(string type)
 {
-	for(const auto &user: user_list)
+	if (type == "all")
 	{
-		std::cout << user.first << ' ';
+		json data;
+		json *data_ptr;
+		data["response"] = "GET_USER";
+		data["body"] = json::array();
+		for(const auto &user: user_list)
+		{
+			json userToAdd = json::array({user.second->userName, user.second->status});
+			data["body"].push_back(userToAdd);
+			std::cout << user.first << ' ';
+		}
+		printf("===============\n");
+		cout << data.dump().c_str() <<  endl;
+		printf("===============\n");
+	}
+	else {
+		json data;
+		json *data_ptr;
+		data["response"] = "GET_USER";
+		User *user2 = user_list[type];
+		string burnName = user2->userName;
+		data["body"] = json::array({"username", burnName});
+		cout << data.dump().c_str() <<  endl;
 	}
 }
 
@@ -197,7 +219,7 @@ void *connection_handler(void *socket_desc)
 		try
 		{
 			char buffer[8192];
-			int recived = recv(user_socket, buffer, 8192, 0);
+			int recived = recv(sock, buffer, 8192, 0);
 			if (recived > 0)
 			{
 				printf("Recibido buffer: %s\n", buffer);
@@ -205,6 +227,8 @@ void *connection_handler(void *socket_desc)
                 cout << j << "json" << endl;
 
                 string request = j["request"];
+				// printf("REQUESTTTT: %s", request.c_str());
+				cout << " REQUEST JSON " << j << endl;
 
                 if (request == "INIT_CONEX")
                 {
@@ -214,17 +238,32 @@ void *connection_handler(void *socket_desc)
 				{
 
 				}
-				else if (request == "GET_CHAT")
+				else if (j["request"] == "GET_CHAT")
 				{
 
+					// printf("AQUI SE HACE UN GET CHAT SIUUUUUUUUUUU");
+					std::string list_of_messages = getMessages(messages_list);
+					send(user_socket, list_of_messages.c_str(), strlen(list_of_messages.c_str()), 0);
+					printf("%s", list_of_messages.c_str());
+					// getMessages(messages_list)
 				}
 				else if (request == "POST_CHAT")
 				{
-
+					Message mensaje3;
+					mensaje3.message = j["body"][0];
+					mensaje3.emitter = j["body"][1];
+					mensaje3.time = j["body"][2];
+					addMessage(mensaje3);
+					json resp;
+					resp["response"] = "POST_CHAT";
+					resp["code"] = 200;
+					send(user_socket, resp.dump().c_str(), strlen(resp.dump().c_str()), 0);
 				}
 				else if (request == "GET_USER")
 				{
-
+					string userRequested = j["body"];
+					getUsers("all");
+					// getUsers(userRequested);
 				}
 				else if (request == "PUT_STATUS")
 				{
