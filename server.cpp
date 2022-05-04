@@ -186,7 +186,7 @@ const string getMessages(vector<Message> messages)
 	data["body"] = json::array();
 	for (auto &item: messages)
 	{
-		json list_of_messages = json::array({item.message, item.emitter, item.receptor, item.time});
+		json list_of_messages = json::array({item.message, item.emitter, item.time});
 		data["body"].push_back(list_of_messages);
 	}
 	//Reply to the client
