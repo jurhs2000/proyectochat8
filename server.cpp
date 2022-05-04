@@ -44,11 +44,11 @@ int main(int argc, char *argv[])
 	// port = atoi(argv[1]);
 	// User user1;
 	// User user2;
-	// user1.userName = "jurhs";
+	// user1.userName = "oscarsaravia";
 	// user1.status = "1";
 	// user1.socketId = 1;
 	// user1.lastConnection = 10;
-	// user_list["julioherrera"] = &user1;
+	// user_list["oscarsaravia"] = &user1;
 
 	// user2.userName = "jurhs2";
 	// user2.status = "1";
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     // Creating client
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8891);
+    server.sin_port = htons(8888);
     server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
@@ -116,6 +116,24 @@ int main(int argc, char *argv[])
         puts(client_ip);
         puts("Message received from client\n");
         puts(client_reply);
+
+		auto userMetadata = json::parse(client_reply);
+		if (user_list.find(userMetadata["body"][1]) == user_list.end()) {
+			// SIGNIFICA QUE EL USUARIO NO EXISTE
+			User newUser;
+			// newUser.lastConnection
+			newUser.userName = userMetadata["body"][1];
+			newUser.status = "1";
+			cout << " USER ID: " << userMetadata["body"][1] << endl;
+			user_list[userMetadata["body"][1]] = &newUser;
+			json data;
+			data["response"] = "INIT_CONEX";
+			data["code"] = 200;
+			write(new_socket, data.dump().c_str(), strlen(data.dump().c_str()));
+		} else {
+			// SIGNIFICA QUE EL USUARIO YA EXISTE
+			cout << " EL USUARIO YA EXISTE " << endl;
+		}
 		
 		write(new_socket , message , strlen(message));
 
@@ -279,6 +297,7 @@ void *connection_handler(void *socket_desc)
 					string userRequested = j["body"];
 					std::string list_of_users = getUsers(userRequested);
 					send(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()), 0);
+					// write(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()));
 					cout << " SERVER RESPONDED" << list_of_users.c_str() << endl;
 				}
 				else if (request == "PUT_STATUS")
