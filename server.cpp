@@ -86,8 +86,9 @@ int main(int argc, char *argv[])
     // Creating client
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8888);
-    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8889);
+    server.sin_addr.s_addr = inet_addr("172.31.38.117");
+    // server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
@@ -273,7 +274,7 @@ void *connection_handler(void *socket_desc)
 				{
 					cout << " CLIENT REQUESTED GET_CHAT: " << j["body"] << endl;
 					std::string list_of_messages = getMessages(messages_list);
-					send(user_socket, list_of_messages.c_str(), strlen(list_of_messages.c_str()), 0);
+					write(sock, list_of_messages.c_str(), strlen(list_of_messages.c_str()));
 					cout << " SERVER RESPONDED" << list_of_messages.c_str() << endl;
 				}
 				else if (request == "POST_CHAT")
@@ -288,7 +289,7 @@ void *connection_handler(void *socket_desc)
 					json resp;
 					resp["response"] = "POST_CHAT";
 					resp["code"] = 200;
-					send(user_socket, resp.dump().c_str(), strlen(resp.dump().c_str()), 0);
+					write(sock, resp.dump().c_str(), strlen(resp.dump().c_str()));
 					cout << " SERVER RESPONDED" << resp.dump().c_str() << endl;
 				}
 				else if (j["request"] == "GET_USER")
@@ -296,8 +297,8 @@ void *connection_handler(void *socket_desc)
 					cout << " CLIENT REQUESTED GET_USER FROM: " << j["body"] << endl;
 					string userRequested = j["body"];
 					std::string list_of_users = getUsers(userRequested);
-					send(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()), 0);
-					// write(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()));
+					// send(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()), 0);
+					write(sock, list_of_users.c_str(), strlen(list_of_users.c_str()));
 					cout << " SERVER RESPONDED" << list_of_users.c_str() << endl;
 				}
 				else if (request == "PUT_STATUS")
