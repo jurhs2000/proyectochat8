@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
     // Creating client
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8889);
-    server.sin_addr.s_addr = inet_addr("172.31.38.117");
-    // server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8888);
+    // server.sin_addr.s_addr = inet_addr("172.31.38.117");
+    server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
@@ -108,35 +108,6 @@ int main(int argc, char *argv[])
 		puts("Connection accepted");
         printf("%d", c);
         //Receive a reply from the server
-        if( recv(new_socket, client_reply , 2000, 0) < 0)
-        {
-            puts("recv failed");
-        }
-        client_ip = inet_ntoa(client.sin_addr);
-        puts("Client ip is: ");
-        puts(client_ip);
-        puts("Message received from client\n");
-        puts(client_reply);
-
-		auto userMetadata = json::parse(client_reply);
-		if (user_list.find(userMetadata["body"][1]) == user_list.end()) {
-			// SIGNIFICA QUE EL USUARIO NO EXISTE
-			User newUser;
-			// newUser.lastConnection
-			newUser.userName = userMetadata["body"][1];
-			newUser.status = "1";
-			cout << " USER ID: " << userMetadata["body"][1] << endl;
-			user_list[userMetadata["body"][1]] = &newUser;
-			json data;
-			data["response"] = "INIT_CONEX";
-			data["code"] = 200;
-			write(new_socket, data.dump().c_str(), strlen(data.dump().c_str()));
-		} else {
-			// SIGNIFICA QUE EL USUARIO YA EXISTE
-			cout << " EL USUARIO YA EXISTE " << endl;
-		}
-		
-		write(new_socket , message , strlen(message));
 
         pthread_t sniffer_thread;
 		thread_socket = (int*) malloc(1);
@@ -153,11 +124,11 @@ int main(int argc, char *argv[])
 		puts("Handler assigned");
 	}
 	close(socket_desc);
-	if (new_socket<0)
-	{
-		perror("accept failed");
-		return 1;
-	}
+	// if (new_socket<0)
+	// {
+	// 	perror("accept failed");
+	// 	return 1;
+	// }
     return 0;
 }
 
@@ -183,9 +154,8 @@ const string getUsers(string type)
 		data["body"] = json::array();
 		for(const auto &user: user_list)
 		{
-			json userToAdd = json::array({user.second->userName, user.second->status});
+			json userToAdd = json::array({user.first, user.second->status});
 			data["body"].push_back(userToAdd);
-			std::cout << user.first << ' ';
 		}
 		std::string s = data.dump();
 		return s;
@@ -241,6 +211,7 @@ void *connection_handler(void *socket_desc)
 	User currentUser;
 	User *new_user = (User *)socket_desc;
 	int user_socket = new_user->getSocket();
+	string user_n = new_user->getUsername();
 
 	//Get the socket descriptor
 	int sock = *(int*)socket_desc;
@@ -252,6 +223,7 @@ void *connection_handler(void *socket_desc)
 		try
 		{
 			char buffer[8192];
+			memset(buffer, 0, 8192);
 			int recived = recv(sock, buffer, 8192, 0);
 			if (recived > 0)
 			{
@@ -265,6 +237,24 @@ void *connection_handler(void *socket_desc)
                 if (request == "INIT_CONEX")
                 {
 					cout << " CLIENT ASKED FOR INIT CONEX " << endl;
+					// auto userMetadata = json::parse(client_reply);
+					if (user_list.find(j["body"][1]) == user_list.end()) {
+						// SIGNIFICA QUE EL USUARIO NO EXISTE
+						User newUser;
+						// newUser.lastConnection
+						newUser.userName = j["body"][1];
+						newUser.status = "1";
+						newUser.socketId = user_socket;
+						cout << " USER ID: " << j["body"][1] << endl;
+						user_list[j["body"][1]] = &newUser;
+						json data;
+						data["response"] = "INIT_CONEX";
+						data["code"] = 200;
+						write(sock, data.dump().c_str(), strlen(data.dump().c_str()));
+					} else {
+						// SIGNIFICA QUE EL USUARIO YA EXISTE
+						cout << " EL USUARIO YA EXISTE " << endl;
+					}
 				}
 				else if (request == "END_CONEX")
 				{
@@ -291,10 +281,31 @@ void *connection_handler(void *socket_desc)
 					resp["code"] = 200;
 					write(sock, resp.dump().c_str(), strlen(resp.dump().c_str()));
 					cout << " SERVER RESPONDED" << resp.dump().c_str() << endl;
+
+					if (j["body"][3] == "all")
+					{
+						Message socketMessage;
+						map<string, User *>::iterator it;
+						json response = json::object({{"response", "NEW_MESSAGE"}});
+						for (it = user_list.begin(); it != user_list.end(); it++)
+						{
+							User *user = it->second;
+							if (user->userName != j["body"][1])
+							{
+								response["body"] = json::array({j["body"][0], j["body"][1], j["body"][2], j["body"][3]});
+								write(user->socketId, response.dump().c_str(), strlen(response.dump().c_str()));
+							}
+						}
+						cout << " SOCKET MESSAGE SENT " << response << endl;
+					}
 				}
 				else if (j["request"] == "GET_USER")
 				{
 					cout << " CLIENT REQUESTED GET_USER FROM: " << j["body"] << endl;
+					if (j["body"] == "all")
+					{
+
+					}
 					string userRequested = j["body"];
 					std::string list_of_users = getUsers(userRequested);
 					// send(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()), 0);
@@ -303,7 +314,8 @@ void *connection_handler(void *socket_desc)
 				}
 				else if (request == "PUT_STATUS")
 				{
-					cout << " PUT STATUS TO: " << currentUser.userName << endl;
+					cout << "USER USERNAME IN PUT " << new_user->userName << endl;
+					// cout << " PUT STATUS TO: " << currentUser.userName << endl;
 				}
 			}
 		}
