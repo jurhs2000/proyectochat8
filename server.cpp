@@ -29,8 +29,9 @@ void *connection_handler(void *);
 void addUser();
 const string getMessages(vector<Message>);
 void addMessage();
-void getUsers();
+const string getUsers();
 void removeUser();
+void setStatus(string username);
 using namespace std;
 using json = nlohmann::json;
 vector<Message> messages_list;
@@ -41,37 +42,37 @@ int main(int argc, char *argv[])
 {
 	// int port;
 	// port = atoi(argv[1]);
-	User user1;
-	User user2;
-	user1.userName = "jurhs";
-	user1.status = "1";
-	user1.socketId = 1;
-	user1.lastConnection = 10;
-	user_list["julioherrera"] = &user1;
+	// User user1;
+	// User user2;
+	// user1.userName = "jurhs";
+	// user1.status = "1";
+	// user1.socketId = 1;
+	// user1.lastConnection = 10;
+	// user_list["julioherrera"] = &user1;
 
-	user2.userName = "jurhs2";
-	user2.status = "1";
-	user2.socketId = 1;
-	user2.lastConnection = 10;
-	user_list["oscarsaravia"] = &user2;
+	// user2.userName = "jurhs2";
+	// user2.status = "1";
+	// user2.socketId = 1;
+	// user2.lastConnection = 10;
+	// user_list["oscarsaravia"] = &user2;
 
-	Message mensaje1;
-	Message mensaje2;
-	mensaje1.message = "HOLA: ESTE ES EL MENSAJE 1";
-	mensaje1.emitter = "RAHUL";
-	//mensaje1.receptor = "JUhrs";
-	mensaje1.time = "15:59";
+	// Message mensaje1;
+	// Message mensaje2;
+	// mensaje1.message = "HOLA: ESTE ES EL MENSAJE 1";
+	// mensaje1.emitter = "RAHUL";
+	// mensaje1.receptor = "Juhrs";
+	// mensaje1.time = "15:59";
 
-	mensaje2.message = "HOLA: ESTE ES EL MENSAJE 2";
-	mensaje2.emitter = "RAHUL";
-	//mensaje2.receptor = "JUhrs";
-	mensaje2.time = "15:59";
+	// mensaje2.message = "HOLA: ESTE ES EL MENSAJE 2";
+	// mensaje2.emitter = "RAHUL";
+	// mensaje2.receptor = "JUhrs";
+	// mensaje2.time = "15:59";
 
-	messages_list.push_back(mensaje1);
-	messages_list.push_back(mensaje2);
+	// messages_list.push_back(mensaje1);
+	// messages_list.push_back(mensaje2);
 
 	std::string list_of_messages = getMessages(messages_list);
-	printf("%s", list_of_messages.c_str());
+	// printf("%s", list_of_messages.c_str());
 
 	const char *message = list_of_messages.c_str();
     int socket_desc, c, new_socket, *thread_socket;
@@ -85,7 +86,7 @@ int main(int argc, char *argv[])
     // Creating client
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(8889);
+    server.sin_port = htons(8891);
     server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
@@ -153,7 +154,7 @@ void addMessage(Message message){
 	messages_list.push_back(message);
 }
 
-void getUsers(string type)
+const string getUsers(string type)
 {
 	if (type == "all")
 	{
@@ -167,18 +168,23 @@ void getUsers(string type)
 			data["body"].push_back(userToAdd);
 			std::cout << user.first << ' ';
 		}
-		printf("===============\n");
-		cout << data.dump().c_str() <<  endl;
-		printf("===============\n");
+		std::string s = data.dump();
+		return s;
+		// cout << data.dump().c_str() <<  endl;
 	}
 	else {
 		json data;
 		json *data_ptr;
 		data["response"] = "GET_USER";
 		User *user2 = user_list[type];
-		string burnName = user2->userName;
-		data["body"] = json::array({"username", burnName});
-		cout << data.dump().c_str() <<  endl;
+		string tempIp = "1.2.3.4";
+		string tempStatus = user2->status;
+		data["body"] = json::array();
+		data["body"].push_back(tempIp);
+		data["body"].push_back(tempStatus);
+		std::string s = data.dump();
+		return s;
+		// cout << data.dump().c_str() <<  endl;
 	}
 }
 
@@ -191,12 +197,20 @@ const string getMessages(vector<Message> messages)
 	data["body"] = json::array();
 	for (auto &item: messages)
 	{
-		json list_of_messages = json::array({item.message, item.emitter/*, item.receptor*/, item.time});
+		json list_of_messages = json::array({item.message, item.emitter, item.receptor, item.time});
 		data["body"].push_back(list_of_messages);
 	}
 	//Reply to the client
 	std::string s = data.dump();
 	return s;
+}
+
+void setStatus(string username)
+{
+	json data;
+	data["response"] = "PUT_STATUS";
+	data["code"] = 200;
+	// User *user2 = user_list[type];
 }
 
 
@@ -224,15 +238,14 @@ void *connection_handler(void *socket_desc)
 			{
 				printf("Recibido buffer: %s\n", buffer);
 				auto j = json::parse(buffer);
-                cout << j << "json" << endl;
+                // cout << j << "json" << endl;
 
                 string request = j["request"];
 				// printf("REQUESTTTT: %s", request.c_str());
-				cout << " REQUEST JSON " << j << endl;
-
+				cout << " REQUEST JSON " << request << endl;
                 if (request == "INIT_CONEX")
                 {
-					printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+					cout << " CLIENT ASKED FOR INIT CONEX " << endl;
 				}
 				else if (request == "END_CONEX")
 				{
@@ -240,34 +253,37 @@ void *connection_handler(void *socket_desc)
 				}
 				else if (j["request"] == "GET_CHAT")
 				{
-
-					// printf("AQUI SE HACE UN GET CHAT SIUUUUUUUUUUU");
+					cout << " CLIENT REQUESTED GET_CHAT: " << j["body"] << endl;
 					std::string list_of_messages = getMessages(messages_list);
 					send(user_socket, list_of_messages.c_str(), strlen(list_of_messages.c_str()), 0);
-					printf("%s", list_of_messages.c_str());
-					// getMessages(messages_list)
+					cout << " SERVER RESPONDED" << list_of_messages.c_str() << endl;
 				}
 				else if (request == "POST_CHAT")
 				{
-					Message mensaje3;
-					mensaje3.message = j["body"][0];
-					mensaje3.emitter = j["body"][1];
-					mensaje3.time = j["body"][2];
-					addMessage(mensaje3);
+					cout << " CLIENT REQUESTED POST_CHAT FROM: " << j["body"][1] << " TO: " << j["body"][3] << endl;
+					Message tempMessage;
+					tempMessage.message = j["body"][0];
+					tempMessage.emitter = j["body"][1];
+					tempMessage.time = j["body"][2];
+					tempMessage.receptor = j["body"][3];
+					addMessage(tempMessage);
 					json resp;
 					resp["response"] = "POST_CHAT";
 					resp["code"] = 200;
 					send(user_socket, resp.dump().c_str(), strlen(resp.dump().c_str()), 0);
+					cout << " SERVER RESPONDED" << resp.dump().c_str() << endl;
 				}
-				else if (request == "GET_USER")
+				else if (j["request"] == "GET_USER")
 				{
+					cout << " CLIENT REQUESTED GET_USER FROM: " << j["body"] << endl;
 					string userRequested = j["body"];
-					getUsers("all");
-					// getUsers(userRequested);
+					std::string list_of_users = getUsers(userRequested);
+					send(user_socket, list_of_users.c_str(), strlen(list_of_users.c_str()), 0);
+					cout << " SERVER RESPONDED" << list_of_users.c_str() << endl;
 				}
 				else if (request == "PUT_STATUS")
 				{
-
+					cout << " PUT STATUS TO: " << currentUser.userName << endl;
 				}
 			}
 		}
