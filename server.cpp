@@ -196,10 +196,16 @@ const string getMessages(vector<Message> messages)
 
 void setStatus(string username)
 {
-	json data;
-	data["response"] = "PUT_STATUS";
-	data["code"] = 200;
-	// User *user2 = user_list[type];
+	// json data;
+	// data["response"] = "PUT_STATUS";
+	// data["code"] = 200;
+	// auto it = user_list.find(currentUser.userName);
+	// if (it == user_list.end()) {
+	// 	cout << " NOT FOUND " << endl;
+	// } else {
+	// 	currentUser.status = j[]
+	// }
+	// // User *user2 = user_list[type];
 }
 
 
@@ -240,13 +246,13 @@ void *connection_handler(void *socket_desc)
 					// auto userMetadata = json::parse(client_reply);
 					if (user_list.find(j["body"][1]) == user_list.end()) {
 						// SIGNIFICA QUE EL USUARIO NO EXISTE
-						User newUser;
+						currentUser.userName = j["body"][1];
 						// newUser.lastConnection
-						newUser.userName = j["body"][1];
-						newUser.status = "1";
-						newUser.socketId = user_socket;
+						currentUser.userName = j["body"][1];
+						currentUser.status = "1";
+						currentUser.socketId = user_socket;
 						cout << " USER ID: " << j["body"][1] << endl;
-						user_list[j["body"][1]] = &newUser;
+						user_list[j["body"][1]] = &currentUser;
 						json data;
 						data["response"] = "INIT_CONEX";
 						data["code"] = 200;
@@ -298,6 +304,22 @@ void *connection_handler(void *socket_desc)
 						}
 						cout << " SOCKET MESSAGE SENT " << response << endl;
 					}
+					else {
+						json response = json::object({{"response", "NEW_MESSAGE"}});
+
+						map<string, User *>::iterator it;
+						for (it = user_list.begin(); it != user_list.end(); it++)
+						{
+							User *user = it->second;
+							if (user->userName != j["body"][3])
+							{
+								response["body"] = json::array({j["body"][0], j["body"][1], j["body"][2], j["body"][3]});
+								cout << " USUARIO ENCONTRADO " << user->userName << user->socketId << endl;
+								write(user->socketId, response.dump().c_str(), strlen(response.dump().c_str()));
+							}
+						}
+						// write(socketNUm, response.dump().c_str(), strlen(response.dump().c_str()));
+					}
 				}
 				else if (j["request"] == "GET_USER")
 				{
@@ -314,7 +336,16 @@ void *connection_handler(void *socket_desc)
 				}
 				else if (request == "PUT_STATUS")
 				{
-					cout << "USER USERNAME IN PUT " << new_user->userName << endl;
+					json data;
+					data["response"] = "PUT_STATUS";
+					data["code"] = 200;
+					auto it = user_list.find(currentUser.userName);
+					if (it == user_list.end()) {
+						cout << " NOT FOUND " << endl;
+					} else {
+						currentUser.status = j["body"];
+					}
+					cout << "USER USERNAME IN PUT " << currentUser.userName << currentUser.status << endl;
 					// cout << " PUT STATUS TO: " << currentUser.userName << endl;
 				}
 			}
