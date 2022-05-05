@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
     struct sockaddr_in client, server;
     server.sin_family = AF_INET;
     server.sin_port = htons(8888);
-    // server.sin_addr.s_addr = inet_addr("172.31.38.117");
     server.sin_addr.s_addr = INADDR_ANY;
     
     //Bind
@@ -151,6 +150,7 @@ const string getUsers(string type)
 		json data;
 		json *data_ptr;
 		data["response"] = "GET_USER";
+		data["code"] = "200";
 		data["body"] = json::array();
 		for(const auto &user: user_list)
 		{
@@ -165,6 +165,7 @@ const string getUsers(string type)
 		json data;
 		json *data_ptr;
 		data["response"] = "GET_USER";
+		data["code"] = "200";
 		User *user2 = user_list[type];
 		string tempIp = "1.2.3.4";
 		string tempStatus = user2->status;
@@ -311,7 +312,7 @@ void *connection_handler(void *socket_desc)
 						for (it = user_list.begin(); it != user_list.end(); it++)
 						{
 							User *user = it->second;
-							if (user->userName != j["body"][3])
+							if (user->userName == j["body"][3])
 							{
 								response["body"] = json::array({j["body"][0], j["body"][1], j["body"][2], j["body"][3]});
 								cout << " USUARIO ENCONTRADO " << user->userName << user->socketId << endl;
