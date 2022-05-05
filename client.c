@@ -465,18 +465,21 @@ static void receive_from_server(void) {
     while (1) {
         if( recv(socket_desc, server_reply , 2000 , 0) > 0)
         {
-            puts("Reply received\n");
-            puts(server_reply);
-            int write_res = write(pipefd[1], server_reply, strlen(server_reply));
-            if (write_res < 0) {
-                puts("Error writing to pipe");
-            }
             const cJSON *response_type = NULL;
             cJSON *response = cJSON_Parse(server_reply);
             response_type = cJSON_GetObjectItemCaseSensitive(response, "response");
             char *response_str = NULL;
             response_str = cJSON_Print(response_type);
             csr(response_str);
+
+            if (strcmp(response_str, "INIT_CONEX") != 0) {
+                puts("Reply received\n");
+                puts(server_reply);
+                int write_res = write(pipefd[1], server_reply, strlen(server_reply));
+                if (write_res < 0) {
+                    puts("Error writing to pipe");
+                }
+            }
 
             if (strcmp(response_str, "GET_CHAT") == 0) {
                 // render general chat if response is of type GET_CHAT
