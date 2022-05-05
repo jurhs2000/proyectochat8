@@ -17,6 +17,7 @@
 #include <pthread.h>
 
 int socket_desc, status = 0;
+char *target = "all";
 char *user;
 int pipefd[2];
 GtkWidget *window;
@@ -75,10 +76,10 @@ static int send_message(GtkWidget *widget, GtkEntryBuffer *buffer)
     delivered_at = cJSON_CreateString(timestamp);
     from = cJSON_CreateString(user);
     message = cJSON_CreateString(entry_text);
-    to = cJSON_CreateString("all");
-    cJSON_AddItemToArray(body, delivered_at);
-    cJSON_AddItemToArray(body, from);
+    to = cJSON_CreateString(target);
     cJSON_AddItemToArray(body, message);
+    cJSON_AddItemToArray(body, from);
+    cJSON_AddItemToArray(body, delivered_at);
     cJSON_AddItemToArray(body, to);
     cJSON_AddItemToObject(post_chat, "body", body);
     // Parsing JSON to string
@@ -146,7 +147,11 @@ static void show_help(GtkWidget *widget, gpointer data) {
 
 static void show_user_info(char *user_ip, char *user_status)
 {
-    show_message("show user info");
+    csr(user_ip);
+    csr(user_status);
+    printf("\nip del usuario: %s", user_ip);
+    printf("\nstatus del usuario: %s\n", user_status);
+    //show_message(user_ip);
 }
 
 static int req_user_info(GtkWidget *widget, char *username) {
@@ -170,6 +175,28 @@ static int req_user_info(GtkWidget *widget, char *username) {
 	puts("User Info requested successfully\n");
 }
 
+static int req_chat_user(GtkWidget *widget,  char *username) {
+    // Creating JSON object
+    cJSON *get_chat = cJSON_CreateObject();
+    cJSON *request = NULL;
+    cJSON *body = NULL;
+    request = cJSON_CreateString("GET_CHAT");
+    cJSON_AddItemToObject(get_chat, "request", request);
+    body = cJSON_CreateString(username);
+    cJSON_AddItemToObject(get_chat, "body", body);
+    // Parsing JSON to string
+    char *get_chat_str;
+    get_chat_str = cJSON_Print(get_chat);
+    // Sending connection request
+	if( send(socket_desc , get_chat_str , strlen(get_chat_str) , 0) < 0)
+	{
+		puts("Direct Messages can not be requested");
+		return 1;
+	}
+	puts("Direct Messages requested successfully\n");
+    target = username;
+}
+
 static void show_users(char *users_list) {
     gtk_grid_remove_row(GTK_GRID (grid), 2);
     gtk_grid_remove_row(GTK_GRID (grid), 1);
@@ -182,25 +209,27 @@ static void show_users(char *users_list) {
     gtk_grid_attach(GTK_GRID(grid), scrolled, 0,2,3,1);
     cJSON *users = cJSON_Parse(users_list);
     const cJSON *user = NULL;
-    char *user_text = (char *)malloc(248), *property_string = NULL;
-    strcpy(user_text, "");
     int i = 0;
     cJSON_ArrayForEach(user, users) {
+        char *user_text = (char *)malloc(248), *user_text_f = (char *)malloc(248), *property_string = NULL;
+        strcpy(user_text, "");
+        strcpy(user_text_f, "");
         cJSON *value = cJSON_GetArrayItem(user, 0);
         property_string = cJSON_Print(value);
         csr(property_string);
         strcat(user_text, property_string);
+        strcat(user_text_f, property_string);
         value = cJSON_GetArrayItem(user, 1);
         property_string = cJSON_Print(value);
         csr(property_string);
-        strcat(user_text, " is ");
+        strcat(user_text_f, " is ");
         if (strcmp(property_string, "0") == 0) {
-            strcat(user_text, "active");
+            strcat(user_text_f, "active");
         } else {
-            strcat(user_text, "busy");
+            strcat(user_text_f, "busy");
         }
 
-        label = gtk_label_new(user_text);
+        label = gtk_label_new(user_text_f);
         gtk_widget_set_margin_start(label, 10);
         gtk_widget_set_margin_top(label, 10);
         gtk_grid_attach (GTK_GRID (users_grid), label, 0, i, 2, 1);
@@ -212,7 +241,7 @@ static void show_users(char *users_list) {
         chat_button = gtk_button_new_with_label ("Chat User");
         gtk_widget_set_margin_start(chat_button, 10);
         gtk_widget_set_margin_top(chat_button, 10);
-        g_signal_connect (chat_button, "clicked", G_CALLBACK (req_user_info), user_text);
+        g_signal_connect (chat_button, "clicked", G_CALLBACK (req_chat_user), user_text);
         gtk_grid_attach (GTK_GRID (users_grid), chat_button, 4, i, 1, 1);
         i++;
     }
@@ -287,7 +316,7 @@ static int req_chat(GtkWidget *widget, gpointer data) {
     cJSON *body = NULL;
     request = cJSON_CreateString("GET_CHAT");
     cJSON_AddItemToObject(get_chat, "request", request);
-    body = cJSON_CreateString("all");
+    body = cJSON_CreateString(target);
     cJSON_AddItemToObject(get_chat, "body", body);
     // Parsing JSON to string
     char *get_chat_str;
@@ -299,6 +328,12 @@ static int req_chat(GtkWidget *widget, gpointer data) {
 		return 1;
 	}
 	puts("Messages requested successfully\n");
+    target = "all";
+}
+
+static int req_all_chat(GtkWidget *widget, gpointer data) {
+    target = "all";
+    req_chat(widget, data);
 }
 
 static int req_users(GtkWidget *widget, gpointer data) {
@@ -452,7 +487,11 @@ static void receive_from_server(void) {
                 g_signal_emit_by_name(window, "POST_CHAT_RES");
             } else if (strcmp(response_str, "PUT_STATUS") == 0) {
                 g_signal_emit_by_name(window, "PUT_STATUS_RES");
-            }
+            } else if (strcmp(response_str, "NEW_MESSAGE") == 0) {
+                g_signal_emit_by_name(window, "POST_CHAT_RES");
+            } else if (strcmp(response_str, "INIT_CONEX") == 0) {
+                // clean pipe
+            } 
         }
     }
 }
@@ -563,6 +602,9 @@ static void activate(GtkApplication *app, gpointer user_data)
     g_signal_connect(window, "PUT_STATUS_RES", G_CALLBACK(manage_user_res), NULL);
 
     gtk_window_present (GTK_WINDOW (window));
+    // define gl_context
+    GdkGLContext *gl_context = gdk_gl_context_get_current();
+    gdk_gl_context_make_current(gl_context);
 
     if (pipe(pipefd) == -1) {
         perror("pipe");
